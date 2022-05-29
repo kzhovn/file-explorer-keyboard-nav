@@ -1,7 +1,7 @@
 {
 	"name": "file-explorer-keyboard-nav",
-	"version": "0.0.1",
-	"description": "",
+	"version": "0.1.0",
+	"description": "Navigate the file explorer using the keyboard.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

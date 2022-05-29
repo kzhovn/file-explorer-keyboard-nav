@@ -1,4 +1,4 @@
-# File explorer keyboard navigation
+# File Explorer Keyboard Navigation
 
 Adds a command to open the next/previous file in the file explorer.
 
@@ -18,7 +18,7 @@ This plugin is currently in beta and cannot be installed through the community p
     1. Scroll to the `Beta Plugin List` section
     2. `Add Beta Plugin`
     3. Specify this repository: `kzhovn/file-explorer-keyboard-nav`
-3. Enable the `File explorer keyboard navigation` plugin (`Settings` -> `Community Plugins`)
+3. Enable the `File Explorer Keyboard Navigation` plugin (`Settings` -> `Community Plugins`)
 
 ### Manually installing the plugin
 

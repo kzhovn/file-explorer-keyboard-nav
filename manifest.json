@@ -1,10 +1,10 @@
 {
 	"id": "file-explorer-keyboard-nav",
 	"name": "File Explorer Keyboard Navigation",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"minAppVersion": "0.12.0",
-	"description": ".",
+	"description": "Navigate the file explorer using the keyboard.",
 	"author": "kzhovn",
-	"authorUrl": "",
+	"authorUrl": "github.com/kzhovn/",
 	"isDesktopOnly": false
 }
