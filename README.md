@@ -3,7 +3,11 @@
 Adds commands to open the next/previous file in the file explorer.
 
 ## Limitations
-This plugin is currently a simple proof-of-concept with only limited testing. It navigates only markdown files within the parent folder of the currently opened note, in alphabetical order by note name. If you have any other sort order enabled, this plugin will still move alphabetically and not according to the visual sort order.
+This plugin is currently a simple proof-of-concept with only limited testing. It navigates **only markdown files** within the parent folder of the currently opened note, **in alphabetical order** by note name. If you have any other sort order enabled, this plugin will still move alphabetically and not according to the visual sort order.
+
+There are no default hotkey bindings; go to `Settings` -> `Hotekeys` to set your own. I use `Ctrl` + `↓`/`↑`.
+
+## Installation
 
 This plugin is currently in beta and cannot be installed through the community plugin store.
 
