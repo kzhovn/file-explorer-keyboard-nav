@@ -1,5 +1,9 @@
 import { Plugin, TFile } from 'obsidian';
 
+const enum Direction {
+	Forward,
+	Backwards
+}
 
 export default class FileExplorerKeyboardNav extends Plugin {
 
@@ -9,7 +13,7 @@ export default class FileExplorerKeyboardNav extends Plugin {
 			id: 'file-explorer-next-file',
 			name: 'Go to next file',
 			callback: () => {
-				this.openNextFile();
+				this.openNextFile(Direction.Forward);
 			}
 		});
 
@@ -17,53 +21,38 @@ export default class FileExplorerKeyboardNav extends Plugin {
 			id: 'file-explorer-previous-file',
 			name: 'Go to previous file',
 			callback: () => {
-				this.openPreviousFile();
+				this.openNextFile(Direction.Backwards);
 			}
 		});
 	}
 
-	openNextFile() : void {
+	openNextFile(direction: Direction) : void {
 		const activeView = this.app.workspace.getActiveFile(); //return TFile
+		let lookingForFileToOpen = false;
+
 		if (activeView) {
 			const parentFolder = activeView.parent;
 
-			for (let i = 0; i < parentFolder.children.length - 1; i++) {
+			// set indices of for loop
+			let i = (direction === Direction.Forward) ? 0 : parentFolder.children.length;
+			const stop = (direction === Direction.Forward) ? parentFolder.children.length : -1;
+			const step = (direction === Direction.Forward) ? 1 : -1
+
+			for (; i != stop; i += step) {
 				const currentFile = parentFolder.children[i];
-				console.log(currentFile);
-				if (currentFile instanceof TFile && currentFile === activeView) {
-					const nextFile = parentFolder.children[i + 1];
-					if (nextFile instanceof TFile) {
-						app.workspace.activeLeaf.openFile(nextFile);
+
+				if (!lookingForFileToOpen && currentFile === activeView) {
+					lookingForFileToOpen = true;
+				} else if (lookingForFileToOpen) {
+					const nextAbstractFile = parentFolder.children[i];
+
+					// open first *file*; if folder continue loop
+					if (nextAbstractFile instanceof TFile) {
+						app.workspace.activeLeaf.openFile(nextAbstractFile);
 						return;
 					}
 				}
 			}
 		}
-	}
-
-	openPreviousFile(): void {
-		const activeView = this.app.workspace.getActiveFile(); //return TFile
-		if (activeView) {
-			const parentFolder = activeView.parent;
-
-			for (let i = parentFolder.children.length - 1; i > 0; i--) {
-				const currentFile = parentFolder.children[i];
-				console.log(currentFile);
-				if (currentFile instanceof TFile && currentFile === activeView) {
-					const previousFile = parentFolder.children[i - 1];
-					if (previousFile instanceof TFile) {
-						app.workspace.activeLeaf.openFile(previousFile);
-						return;
-					}
-				}
-			}
-		}
-	}
-
-
-
-
-	onunload() {
-
 	}
 }
