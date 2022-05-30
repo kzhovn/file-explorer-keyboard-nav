@@ -1,4 +1,4 @@
-import { Plugin, TFile } from 'obsidian';
+import { Plugin, TFile, TFolder } from 'obsidian';
 
 const enum Direction {
 	Forward,
@@ -26,10 +26,18 @@ export default class FileExplorerKeyboardNav extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'file-explorer-higher-level',
-			name: 'Open first file in parent folder',
+			id: 'file-explorer-go-up',
+			name: 'Go to parent folder',
 			callback: () => {
 				this.goToParentFolder();
+			}
+		});
+
+		this.addCommand({
+			id: 'file-explorer-go-down',
+			name: 'Go to first child folder',
+			callback: () => {
+				this.gotToChildFolder();
 			}
 		});
 	}
@@ -72,17 +80,38 @@ export default class FileExplorerKeyboardNav extends Plugin {
 			const parentFolder = activeView.parent;
 
 			if (!parentFolder.isRoot()) {
-				const grandParentFolder = parentFolder.parent;
-
-				for (const child of grandParentFolder.children) {
-					console.log(child);
-					if (child instanceof TFile) {
-						app.workspace.activeLeaf.openFile(child);
-						return;
-					}
-				}
+				this.openFirstFile(parentFolder.parent);
 			}
 		}
 	}
 
+	// open first file of the first child folder of the folder the current file is in, if such exists
+	gotToChildFolder(): void {
+		const activeView = this.app.workspace.getActiveFile();
+
+		if (activeView) {
+			const parentFolder = activeView.parent;
+
+			for (const child of parentFolder.children) {
+				if (child instanceof TFolder) {
+					this.openFirstFile(child);
+					return;
+				}
+			}
+		}
+
+	}
+
+	// open the first file of the given folder, if a file exists in the folder at all; else return false
+	openFirstFile(folder : TFolder) : boolean {
+		for (const child of folder.children) {
+			console.log(folder)
+			if (child instanceof TFile) {
+				app.workspace.activeLeaf.openFile(child);
+				return true;
+			}
+		}
+
+		return false;
+	}
 }
