@@ -24,6 +24,14 @@ export default class FileExplorerKeyboardNav extends Plugin {
 				this.openNextFile(Direction.Backwards);
 			}
 		});
+
+		this.addCommand({
+			id: 'file-explorer-higher-level',
+			name: 'Open first file in parent folder',
+			callback: () => {
+				this.goToParentFolder();
+			}
+		});
 	}
 
 	openNextFile(direction: Direction) : void {
@@ -55,4 +63,26 @@ export default class FileExplorerKeyboardNav extends Plugin {
 			}
 		}
 	}
+
+	// open the first file of the folder containing the folder the current file is in, if the current file is not in root
+	goToParentFolder() : void {
+		const activeView = this.app.workspace.getActiveFile();
+
+		if (activeView) {
+			const parentFolder = activeView.parent;
+
+			if (!parentFolder.isRoot()) {
+				const grandParentFolder = parentFolder.parent;
+
+				for (const child of grandParentFolder.children) {
+					console.log(child);
+					if (child instanceof TFile) {
+						app.workspace.activeLeaf.openFile(child);
+						return;
+					}
+				}
+			}
+		}
+	}
+
 }
