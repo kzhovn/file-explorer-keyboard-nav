@@ -23,18 +23,34 @@ export default class FileExplorerKeyboardNav extends Plugin {
 				this.openNextFile(Direction.Backwards);
 			}
 		});
+
+		this.addCommand({
+			id: 'file-explorer-next-folder',
+			name: 'Go to next folder',
+			callback: () => {
+				this.nextFolder(Direction.Forward);
+			}
+		});
+
+		this.addCommand({
+			id: 'file-explorer-previous-folder',
+			name: 'Go to previous folder',
+			callback: () => {
+				this.nextFolder(Direction.Backwards);
+			}
+		});
 	}
 
 	// Open the file after the currently open file; if no such file exists open the first file of the folder
-	openNextFile(direction: Direction) : Promise<void> {
-		const currentFolder = this.getCurrentFolder();
+	openNextFile(direction: Direction = Direction.Forward) : Promise<void> {
 		const openFile = app.workspace.getActiveFile();
 
 		// if we have no file, we're starting at the root and just grabbing the first file
 		if (!openFile) {
-			this.openFirstFile(currentFolder, direction);
+			this.openFirstFile(app.vault.getRoot(), direction);
 		} else {
-			const files = fileExplorerSort(currentFolder);
+			const currentFolder = this.getCurrentFolder();
+			const files = fileExplorerSortFiles(currentFolder);
 			let openNextFile = false;
 
 			// set indices of for loop
@@ -45,17 +61,40 @@ export default class FileExplorerKeyboardNav extends Plugin {
 			// loop forwards/backward, find the currently open file, and after finding it open next
 			for (; i != stop; i += step) {
 
-				const currentAbsrtFile = files[i];
-
-				if (!openNextFile && currentAbsrtFile === openFile) {
+				if (!openNextFile && files[i] === openFile) {
 					openNextFile = true;
 				} else if (openNextFile) {
-					app.workspace.activeLeaf.openFile(currentAbsrtFile);
+					app.workspace.activeLeaf.openFile(files[i]);
 					return;
 				}
 			}
 		}
+	}
 
+	nextFolder(direction : Direction = Direction.Forward) {
+		const openFolder = this.getCurrentFolder();
+
+		// if we have no file, we're starting at the root and just grabbing the first file
+		if (openFolder && !openFolder.isRoot()) {
+			const parentFolder = openFolder.parent;
+			const siblingFolders = fileExplorerSortFolders(parentFolder);
+			let openNextFolder = false;
+
+			// set indices of for loop
+			let i = (direction === Direction.Forward) ? 0 : siblingFolders.length - 1;
+			const stop = (direction === Direction.Forward) ? siblingFolders.length : -1;
+			const step = (direction === Direction.Forward) ? 1 : -1
+
+			// loop forwards/backward, find the currently open folder, and after finding it open first file of next
+			for (; i != stop; i += step) {
+				if (!openNextFolder && siblingFolders[i] === openFolder) {
+					openNextFolder = true;
+				} else if (openNextFolder && siblingFolders[i].children) { //only open if next folder has children
+					this.openFirstFile(siblingFolders[i]);
+					return;
+				}
+			}
+		}
 	}
 
 	/*** Utils ***/
@@ -63,8 +102,7 @@ export default class FileExplorerKeyboardNav extends Plugin {
 	// open the first file of the given folder, if the folder is not empty
 	// if direction is set to backwards, will open the last file
 	openFirstFile(folder : TFolder, direction: Direction = Direction.Forward) {
-		const files = fileExplorerSort(folder);
-		console.log(files);
+		const files = fileExplorerSortFiles(folder);
 		if (files.length > 0) {
 			if (direction === Direction.Forward) {
 				app.workspace.activeLeaf.openFile(files[0]);
@@ -76,40 +114,31 @@ export default class FileExplorerKeyboardNav extends Plugin {
 		}
 	}
 
-	// return the parent folder of the active view, or, if such does not exist, the root folder
+	// return the parent folder of the active view, or, if such does not exist, null
 	getCurrentFolder() : TFolder {
 		const activeView = app.workspace.getActiveFile();
 
 		if (activeView) {
 			return activeView.parent;
-		} else {
-			return app.vault.getRoot();
 		}
 	}
 }
 
 // filter out unsupported files and folders, then sort the remaining children of the passed folder
 // according to the order they are displayed in the file explorer
-function fileExplorerSort(folder: TFolder) : TFile[] {
-	let files : TFile[] = [];
-
-	if (folder.children) {
-		files = removeUnsupportedFilesAndFolders(folder.children);
-	} else {
-		return files;
-	}
-
+function fileExplorerSortFiles(folder : TFolder) : TFile[] {
+	const files = removeUnsupportedFilesAndFolders(folder);
 	const collator = new Intl.Collator(navigator.languages[0] || navigator.language,
-			{ numeric: true, ignorePunctuation: false, caseFirst: 'upper' });
+		{ numeric: true, ignorePunctuation: false, caseFirst: 'upper' });
 	// reverse alphabetical is still sorted alphabetically by extension if basenames match
 	const reverseCollator = new Intl.Collator(navigator.languages[0] || navigator.language,
-			{ numeric: true, ignorePunctuation: false, caseFirst: 'lower' });
+		{ numeric: true, ignorePunctuation: false, caseFirst: 'lower' });
 
 	//@ts-ignore
-	const sortOrder : string = app.vault.config.fileSortOrder;
+	const sortOrder: string = app.vault.config.fileSortOrder;
 
 	// sort using localeSort(), but in alphabetical sort substrings go *before* the longer string
-	files.sort((a: TFile, b: TFile) => {
+	files.sort((a: TFile , b: TFile ) => {
 
 		if (sortOrder === 'alphabetical') {
 			if (a.basename.startsWith(b.basename) && a.basename !== b.basename) {
@@ -144,19 +173,57 @@ function fileExplorerSort(folder: TFolder) : TFile[] {
 	});
 
 	return files;
+
 }
 
-// Removes folders and unsupported file formats from the passed list of TAbstractFiles
+function fileExplorerSortFolders(folder : TFolder) : TFolder[] {
+	const childFolders = removeFiles(folder);
+	const collator = new Intl.Collator(navigator.languages[0] || navigator.language,
+		{ numeric: true, ignorePunctuation: false, caseFirst: 'upper' });
+
+	// sort using localeSort(), but in alphabetical sort substrings go *before* the longer string
+	childFolders.sort((a: TFolder, b: TFolder) => {
+
+		if (a.name.startsWith(b.name) && a.name !== b.name) {
+			return 1;
+		} else if (b.name.startsWith(a.name) && a.name !== b.name) {
+			return -1;
+		} else {
+			return collator.compare(a.name, b.name);
+		}
+
+
+	});
+
+	return childFolders;
+
+}
+
+// Removes folders and unsupported file formats from the passed folder, returns a list of files
 // https://help.obsidian.md/Advanced+topics/Accepted+file+formats
-function removeUnsupportedFilesAndFolders(filesAndFolders : TAbstractFile[]) : TFile[] {
+function removeUnsupportedFilesAndFolders(folder : TFolder) : TFile[] {
 	const extensionRegex = new RegExp(/^.*\.(md|jpg|png|jpg|jpeg|gif|bmp|svg|mp3|webm|wav|m4a|ogg|3gp|flac|mp4|webm|ogv|pdf)$/i);
+	const filesAndFolders = folder.children;
 
 	const checked_files : TFile[] = [];
-	for (const file of filesAndFolders) {
-		if (file instanceof TFile && extensionRegex.test(file.name)) {
-			checked_files.push(file);
+	for (const abstrFile of filesAndFolders) {
+		if (abstrFile instanceof TFile && extensionRegex.test(abstrFile.name)) {
+			checked_files.push(abstrFile);
 		}
 	}
 
 	return checked_files;
+}
+
+// Removes all files from the passed folder, returns a list of folders
+function removeFiles(folder : TFolder) : TFolder[] {
+	const folders = [];
+
+	for (const abstrFile of folder.children) {
+		if (abstrFile instanceof TFolder) {
+			folders.push(abstrFile);
+		}
+	}
+
+	return folders;
 }
