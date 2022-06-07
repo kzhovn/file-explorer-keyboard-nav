@@ -26,7 +26,7 @@ export default class FileExplorerKeyboardNav extends Plugin {
 	}
 
 	// Open the file after the currently open file; if no such file exists open the first file of the folder
-	async openNextFile(direction: Direction) : Promise<void> {
+	openNextFile(direction: Direction) : Promise<void> {
 		const currentFolder = this.getCurrentFolder();
 		const openFile = app.workspace.getActiveFile();
 
@@ -101,15 +101,25 @@ function fileExplorerSort(folder: TFolder) : TFile[] {
 
 	const collator = new Intl.Collator(navigator.languages[0] || navigator.language,
 			{ numeric: true, ignorePunctuation: false, caseFirst: 'upper' });
-
 	// reverse alphabetical is still sorted alphabetically by extension if basenames match
 	const reverseCollator = new Intl.Collator(navigator.languages[0] || navigator.language,
 			{ numeric: true, ignorePunctuation: false, caseFirst: 'lower' });
 
+	//@ts-ignore
+	const sortOrder : string = app.vault.config.fileSortOrder;
+
 	// sort using localeSort(), but in alphabetical sort substrings go *before* the longer string
 	files.sort((a: TFile, b: TFile) => {
-		//@ts-ignore; reversed is not just a pure files.reverse()
-		if (app.vault.config.fileSortOrder === 'alphabeticalReverse') {
+
+		if (sortOrder === 'alphabetical') {
+			if (a.basename.startsWith(b.basename) && a.basename !== b.basename) {
+				return 1;
+			} else if (b.basename.startsWith(a.basename) && a.basename !== b.basename) {
+				return -1;
+			} else {
+				return collator.compare(a.name, b.name);
+			}
+		} else if (sortOrder === 'alphabeticalReverse') {
 			if (a.basename.startsWith(b.basename) && a.basename !== b.basename) {
 				return -1;
 			} else if (b.basename.startsWith(a.basename) && a.basename !== b.basename) {
@@ -119,15 +129,18 @@ function fileExplorerSort(folder: TFolder) : TFile[] {
 			} else {
 				return reverseCollator.compare(b.name, a.name);
 			}
-		} else { // alphabetical (and everything else for now) order
-			if (a.basename.startsWith(b.basename) && a.basename !== b.basename) {
-				return 1;
-			} else if (b.basename.startsWith(a.basename) && a.basename !== b.basename) {
-				return -1;
-			} else {
-				return collator.compare(a.name, b.name);
-			}
+		} else if (sortOrder === 'byModifiedTime') {
+			return b.stat.mtime - a.stat.mtime;
+		} else if (sortOrder === 'byModifiedTimeReverse') {
+			return a.stat.mtime - b.stat.mtime;
+		} else if (sortOrder === 'byCreatedTime') {
+			return b.stat.ctime - a.stat.ctime;
+		} else if (sortOrder === 'byCreatedTimeReverse') {
+			return a.stat.ctime - b.stat.ctime;
+		} else {
+			throw new Error("Unsupported sort order.")
 		}
+
 	});
 
 	return files;
