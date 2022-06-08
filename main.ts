@@ -1,8 +1,14 @@
-import { Plugin, TFile, TFolder, TAbstractFile } from 'obsidian';
+import { Plugin, TFile, TFolder, TAbstractFile, WorkspaceLeaf } from 'obsidian';
 
 const enum Direction {
 	Forward,
 	Backwards
+}
+
+export interface FileExplorerItem {
+	file: TFile | TFolder;
+	collapsed?: boolean;
+	setCollapsed?: (state: boolean) => void;
 }
 
 export default class FileExplorerKeyboardNav extends Plugin {
@@ -91,6 +97,13 @@ export default class FileExplorerKeyboardNav extends Plugin {
 					openNextFolder = true;
 				} else if (openNextFolder && siblingFolders[i].children) { //only open if next folder has children
 					this.openFirstFile(siblingFolders[i]);
+					const leaf = app.workspace.getLeavesOfType('file-explorer').first();
+					const folderItem = this.getCurrentFolderItem(leaf, siblingFolders[i]);
+
+					if (folderItem.collapsed) {
+						folderItem.setCollapsed(false);
+					}
+
 					return;
 				}
 			}
@@ -121,6 +134,21 @@ export default class FileExplorerKeyboardNav extends Plugin {
 		if (activeView) {
 			return activeView.parent;
 		}
+	}
+
+	/** Stolen from https://github.com/OfficerHalf/obsidian-collapse-all/blob/61f3460b6416fbc9e1fce0fd0043981a84a79bcd/src/provider/file-explorer.ts#L84=
+	 * Get all `fileItems` on explorer view. This property is not documented.*/
+	getExplorerItems(leaf: WorkspaceLeaf): FileExplorerItem[] {
+		return Object.values((leaf.view as any).fileItems) as FileExplorerItem[];
+	}
+
+	// Get the FileExplorerItem of the current folder
+	getCurrentFolderItem(leaf: WorkspaceLeaf, currentFolder: TFolder): FileExplorerItem {
+		const allItems = this.getExplorerItems(leaf);
+		// This is a very naiive but cheap way to do this.
+		return allItems.filter(item =>
+				item.file.path === currentFolder.path
+		)[0];
 	}
 }
 
@@ -173,7 +201,6 @@ function fileExplorerSortFiles(folder : TFolder) : TFile[] {
 	});
 
 	return files;
-
 }
 
 function fileExplorerSortFolders(folder : TFolder) : TFolder[] {
@@ -202,7 +229,7 @@ function fileExplorerSortFolders(folder : TFolder) : TFolder[] {
 // Removes folders and unsupported file formats from the passed folder, returns a list of files
 // https://help.obsidian.md/Advanced+topics/Accepted+file+formats
 function removeUnsupportedFilesAndFolders(folder : TFolder) : TFile[] {
-	const extensionRegex = new RegExp(/^.*\.(md|jpg|png|jpg|jpeg|gif|bmp|svg|mp3|webm|wav|m4a|ogg|3gp|flac|mp4|webm|ogv|pdf)$/i);
+	const extensionRegex = new RegExp(/^.*\.(md|jpg|png|jpg|jpeg|gif|bmp|svg|mp3|webm|wav|m4a|ogg|3gp|flac|mp4|webm|ogv|pdf|opus)$/i);
 	const filesAndFolders = folder.children;
 
 	const checked_files : TFile[] = [];
@@ -227,3 +254,4 @@ function removeFiles(folder : TFolder) : TFolder[] {
 
 	return folders;
 }
+
