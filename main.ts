@@ -1,4 +1,4 @@
-import { Plugin, TFile, TFolder, TAbstractFile, WorkspaceLeaf } from 'obsidian';
+import { Plugin, TFile, TFolder, WorkspaceLeaf } from 'obsidian';
 
 const enum Direction {
 	Forward,
@@ -13,6 +13,7 @@ export interface FileExplorerItem {
 }
 
 export default class FileExplorerKeyboardNav extends Plugin {
+	currentFilelessFolder : TFolder = null;
 
 	async onload() {
 		this.addCommand({
@@ -55,7 +56,7 @@ export default class FileExplorerKeyboardNav extends Plugin {
 
 		// if we have no file, we're starting at the root and just grabbing the first file
 		if (!openFile) {
-			this.openFirstFile(app.vault.getRoot(), direction);
+			this.openNextFolder(app.vault.getRoot(), direction);
 		} else {
 			const currentFolder = this.getCurrentFolder();
 			const files = fileExplorerSortFiles(currentFolder);
@@ -81,7 +82,15 @@ export default class FileExplorerKeyboardNav extends Plugin {
 	}
 
 	nextFolder(direction : Direction = Direction.Forward) {
-		const openFolder = this.getCurrentFolder();
+		let openFolder;
+
+		// if we are "in" a folder different from the one we have a file open for
+		if (this.currentFilelessFolder) {
+			openFolder = this.currentFilelessFolder;
+			this.currentFilelessFolder = null;
+		} else {
+			openFolder = this.getCurrentFolder();
+		}
 
 		// if we have no file, we're starting at the root and just grabbing the first file
 		if (openFolder && !openFolder.isRoot()) {
@@ -99,7 +108,7 @@ export default class FileExplorerKeyboardNav extends Plugin {
 				if (!openNextFolder && siblingFolders[i] === openFolder) {
 					openNextFolder = true;
 				} else if (openNextFolder && siblingFolders[i].children) { //only open if next folder has children
-					this.openFirstFile(siblingFolders[i]);
+					this.openNextFolder(siblingFolders[i]);
 					this.expandFolder(siblingFolders[i]);
 					return;
 				}
@@ -108,9 +117,9 @@ export default class FileExplorerKeyboardNav extends Plugin {
 	}
 
 
-	// open the first file of the given folder, if the folder is not empty
+	// open the first file of the given folder, or if folder doesn't have valid files store it as the current folder
 	// if direction is set to backwards, will open the last file
-	openFirstFile(folder : TFolder, direction: Direction = Direction.Forward) {
+	openNextFolder(folder : TFolder, direction: Direction = Direction.Forward) {
 		const files = fileExplorerSortFiles(folder);
 		if (files.length > 0) {
 			if (direction === Direction.Forward) {
@@ -119,7 +128,7 @@ export default class FileExplorerKeyboardNav extends Plugin {
 				app.workspace.activeLeaf.openFile(files[files.length - 1]);
 			}
 		} else {
-			throw new Error("Empty folder");
+			this.currentFilelessFolder = folder;
 		}
 	}
 
@@ -151,7 +160,6 @@ export default class FileExplorerKeyboardNav extends Plugin {
 	expandFolder(folder : TFolder) {
 		const leaf = app.workspace.getLeavesOfType('file-explorer').first();
 		const folderItem = this.getFileExplorerItem(leaf, folder);
-		console.log(folderItem);
 		this.scroll(folderItem);
 
 		if (folderItem.collapsed) {
@@ -164,7 +172,6 @@ export default class FileExplorerKeyboardNav extends Plugin {
 		if ((item instanceof TFile) || (item instanceof TFolder)) { //written as an or instead of not to make TS happy
 			const leaf = app.workspace.getLeavesOfType('file-explorer').first();
 			item = this.getFileExplorerItem(leaf, item);
-
 		}
 
 		//@ts-ignore ; doesn't know about scrollIntoViewIfNeeded()
