@@ -8,6 +8,7 @@ const enum Direction {
 export interface FileExplorerItem {
 	file: TFile | TFolder;
 	collapsed?: boolean;
+	titleEl: Element;
 	setCollapsed?: (state: boolean) => void;
 }
 
@@ -47,6 +48,7 @@ export default class FileExplorerKeyboardNav extends Plugin {
 		});
 	}
 
+
 	// Open the file after the currently open file; if no such file exists open the first file of the folder
 	openNextFile(direction: Direction = Direction.Forward) : Promise<void> {
 		const openFile = app.workspace.getActiveFile();
@@ -71,6 +73,7 @@ export default class FileExplorerKeyboardNav extends Plugin {
 					openNextFile = true;
 				} else if (openNextFile) {
 					app.workspace.activeLeaf.openFile(files[i]);
+					this.scroll(files[i]);
 					return;
 				}
 			}
@@ -97,20 +100,13 @@ export default class FileExplorerKeyboardNav extends Plugin {
 					openNextFolder = true;
 				} else if (openNextFolder && siblingFolders[i].children) { //only open if next folder has children
 					this.openFirstFile(siblingFolders[i]);
-					const leaf = app.workspace.getLeavesOfType('file-explorer').first();
-					const folderItem = this.getCurrentFolderItem(leaf, siblingFolders[i]);
-
-					if (folderItem.collapsed) {
-						folderItem.setCollapsed(false);
-					}
-
+					this.expandFolder(siblingFolders[i]);
 					return;
 				}
 			}
 		}
 	}
 
-	/*** Utils ***/
 
 	// open the first file of the given folder, if the folder is not empty
 	// if direction is set to backwards, will open the last file
@@ -142,13 +138,38 @@ export default class FileExplorerKeyboardNav extends Plugin {
 		return Object.values((leaf.view as any).fileItems) as FileExplorerItem[];
 	}
 
-	// Get the FileExplorerItem of the current folder
-	getCurrentFolderItem(leaf: WorkspaceLeaf, currentFolder: TFolder): FileExplorerItem {
+	// Get the FileExplorerItem of the passed file or folder
+	getFileExplorerItem(leaf: WorkspaceLeaf, abstrFile: TFolder | TFile): FileExplorerItem {
 		const allItems = this.getExplorerItems(leaf);
 		// This is a very naiive but cheap way to do this.
 		return allItems.filter(item =>
-				item.file.path === currentFolder.path
+				item.file.path === abstrFile.path
 		)[0];
+	}
+
+	//uncollapse the given folder and scroll to it if needed
+	expandFolder(folder : TFolder) {
+		const leaf = app.workspace.getLeavesOfType('file-explorer').first();
+		const folderItem = this.getFileExplorerItem(leaf, folder);
+		console.log(folderItem);
+		this.scroll(folderItem);
+
+		if (folderItem.collapsed) {
+			folderItem.setCollapsed(false);
+		}
+	}
+
+	// scroll to given item in file explorer
+	scroll(item : FileExplorerItem | TFile | TFolder) {
+		if ((item instanceof TFile) || (item instanceof TFolder)) { //written as an or instead of not to make TS happy
+			const leaf = app.workspace.getLeavesOfType('file-explorer').first();
+			item = this.getFileExplorerItem(leaf, item);
+
+		}
+
+		//@ts-ignore ; doesn't know about scrollIntoViewIfNeeded()
+		item.titleEl.scrollIntoViewIfNeeded({ behavior: "smooth", block: "nearest" });
+
 	}
 }
 
@@ -203,12 +224,13 @@ function fileExplorerSortFiles(folder : TFolder) : TFile[] {
 	return files;
 }
 
+// sort folders in file explorer order
+// note that regardless of the user-defined sort order these are always alphabetical
 function fileExplorerSortFolders(folder : TFolder) : TFolder[] {
 	const childFolders = removeFiles(folder);
 	const collator = new Intl.Collator(navigator.languages[0] || navigator.language,
 		{ numeric: true, ignorePunctuation: false, caseFirst: 'upper' });
 
-	// sort using localeSort(), but in alphabetical sort substrings go *before* the longer string
 	childFolders.sort((a: TFolder, b: TFolder) => {
 
 		if (a.name.startsWith(b.name) && a.name !== b.name) {
@@ -218,8 +240,6 @@ function fileExplorerSortFolders(folder : TFolder) : TFolder[] {
 		} else {
 			return collator.compare(a.name, b.name);
 		}
-
-
 	});
 
 	return childFolders;
