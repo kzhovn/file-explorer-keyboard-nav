@@ -176,7 +176,6 @@ export default class FileExplorerKeyboardNav extends Plugin {
 
 		//@ts-ignore ; doesn't know about scrollIntoViewIfNeeded()
 		item.titleEl.scrollIntoViewIfNeeded({ behavior: "smooth", block: "nearest" });
-
 	}
 }
 

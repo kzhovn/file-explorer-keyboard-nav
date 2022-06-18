@@ -1,6 +1,6 @@
 {
 	"name": "file-explorer-keyboard-nav",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Navigate the file explorer using the keyboard.",
 	"main": "main.js",
 	"scripts": {

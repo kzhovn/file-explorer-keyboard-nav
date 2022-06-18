@@ -1,11 +1,12 @@
 # File Explorer Keyboard Navigation
 
-Adds commands to open the next/previous file in the file explorer. There are no default hotkey bindings; go to `Settings` -> `Hotkeys` to set your own. I use `Ctrl` + `↓`/`↑`.
+Adds commands to navigage the file explorer using the keyboard. There are no default hotkey bindings; go to `Settings` -> `Hotkeys` to set your own. I use `Ctrl` + `↓`/`↑` for next/previous file, and `Ctrl` + `Shift` + `↓`/`↑` for next/previous folder.
 
-This plugin is currently a simple proof-of-concept with only limited testing. It may navigate files out of visual order, especially when dealing with non-standard characters or non-latin text. Please file an issue if you notice any errors.
+This plugin is currently a proof-of-concept with only limited testing. It may navigate files out of visual order, especially when dealing with non-standard characters or non-latin text. Please file an issue if you notice any errors.
+
+Note that the latest insider release (0.15.0) supports keyboard naviagation natively, though I'm unsure how exactly it compares to the features of this plugin.
 
 ## Limitations
-The commands navigate files within the parent folder of the currently opened note, **in alphabetical or reverse alphabetical order** by note name. If your files are displayed in "Modified time" or "Created time" order, the plugin will iterate through the files as if they were in alphabetical order.
 
 The plugin may not correctly recognize files immediately on creation, and Obsidian ocassionally orders files strangely immediately after a rename. If it is skipping new files, refresh or restart Obsidian.
 
